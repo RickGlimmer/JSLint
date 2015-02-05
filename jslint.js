@@ -615,7 +615,7 @@ var JSLINT = (function () {
 // comment todo
         tox = /^\W*to\s*do(?:\W|$)/i,
 // token
-        tx = /^\s*([(){}\[\]\?.,:;'"~#@`]|={1,3}|\/(\*(jslint|properties|property|members?|globals?)?|=|\/)?|\*[\/=]?|\+(?:=|\++)?|-(?:=|-+)?|[\^%]=?|&[&=]?|\|[|=]?|>{1,3}=?|<(?:[\/=!]|\!(\[|--)?|<=?)?|\!(\!|==?)?|[a-zA-Z_$][a-zA-Z0-9_$]*|[0-9]+(?:[xX][0-9a-fA-F]+|\.[0-9]*)?(?:[eE][+\-]?[0-9]+)?)/;
+        tx = /^\s*([(){}\[\]\?.,:;'"~#@`]|={1,3}|\/(\*(jslint|properties|property|members?|globals?)?|=|\/)?|\*[\/=]?|\+(?:=|\++)?|-(?:=|-+)?|[\^%]=?|&[&=]?|\|[|=]?|>{1,3}=?|<(?:[\/=!]|\!(\[|--)?|<=?)?|\!(\!|==?)?|[a-zA-Z_$\u00fe][a-zA-Z0-9_$\u00fe]*|[0-9]+(?:[xX][0-9a-fA-F]+|\.[0-9]*)?(?:[eE][+\-]?[0-9]+)?)/;
 
 
     if (typeof String.prototype.entityify !== 'function') {
@@ -1247,7 +1247,7 @@ klass:              do {
 //      identifier
 
                         first = snippet.charAt(0);
-                        if (first.isAlpha() || first === '_' || first === '$') {
+                        if (first.isAlpha() || first === '_' || first === '$' || first === 'þ') {
                             return it('(identifier)', snippet);
                         }
 
@@ -1423,8 +1423,10 @@ klass:              do {
                 if (next_token.edge) {
                     if (next_token.edge === 'label') {
                         expected_at(1);
-                    } else if (next_token.edge === 'case' || indent.mode === 'statement') {
+                    } else if ( indent.mode === 'statement') {
                         expected_at(indent.at - option.indent);
+                    } else if (indent.mode === 'case') {
+                        expected_at(indent.at + option.indent);
                     } else if (indent.mode !== 'array' || next_token.line !== token.line) {
                         expected_at(indent.at);
                     }
@@ -3556,10 +3558,16 @@ klass:              do {
         step_out(')', the_case);
         one_space();
         advance('{');
-        step_in();
+        if (!option.white) {
+            step_in(indent.at + option.indent);
+        }
+        else {
+            step_in();
+        }
+
         in_block = true;
         this.second = [];
-        if (that.from !== next_token.from && !option.white) {
+        if (!option.white && that.from + option.indent !== next_token.from) {
             next_token.warn('expected_a_at_b_c', next_token.string, that.from, next_token.from);
         }
         while (next_token.id === 'case') {
@@ -3585,6 +3593,9 @@ klass:              do {
                 }
             }
             spaces();
+            if (!option.white) {
+                step_in(indent.at + option.indent);
+            }
             the_case.second = statements();
             if (the_case.second && the_case.second.length > 0) {
                 if (!the_case.second[the_case.second.length - 1].disrupt) {
@@ -3594,6 +3605,7 @@ klass:              do {
                 next_token.warn('empty_case');
             }
             this.second.push(the_case);
+            step_out();
         }
         if (this.second.length === 0) {
             next_token.warn('missing_a', 'case');
@@ -3607,6 +3619,9 @@ klass:              do {
             no_space_only();
             advance(':');
             spaces();
+            if (!option.white) {
+                step_in(indent.at + option.indent);
+            }
             the_case.second = statements();
             if (the_case.second && the_case.second.length > 0) {
                 this.disrupt = the_case.second[the_case.second.length - 1].disrupt;
@@ -3614,6 +3629,7 @@ klass:              do {
                 the_case.warn('empty_case');
             }
             this.second.push(the_case);
+            step_out();
         }
         if (this.break) {
             this.disrupt = false;
